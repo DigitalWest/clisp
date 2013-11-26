@@ -1,0 +1,30 @@
+(setq operat '())
+(setq service-word '())
+(setq split '())
+(setq errors '())
+
+
+(defun include-operation (token)
+ (if (find token '("-" ":=" "<" ">" "*") :test #'equal) (setq operat (cons token operat)))
+
+(defun include-service-word (token)
+ (if (find token '("PROGRAM" "VAR" "INTEGER" "REAL" "BEGIN" "END" "IF" "THEN" "ELSE" "GOTO" "FOR" "TO" "DO" "READ" "WRITE") :test #'equal) 
+     (setq service-word (cons token service-word))))
+
+(defun include-splitters (token)
+ (if (find token '(";" ":" "," "(" ")" ".") :test #'equal) (setq split (cons token split)))
+
+
+(defun include-errors (token)
+(if (not (include-operation token))
+    (if (not (include-service-word token))
+        (if (not (include-splitters token))
+            (setq errors (cons token errors))))
+
+(prin1 operat)
+
+(prin1 service-word)
+
+(prin1 split)
+
+(prin1 errors)
