@@ -123,6 +123,17 @@
   (setq id-c (+ 1 id-c))
   (concatenate 'string "id" (write-to-string id-c)))
 
+(defparameter groups (make-hash-table :test 'equal))
+(defparameter ids '())
+
+(defun add-id-token (token)
+	(push token ids))
+
+(defun token-in-groups (token)
+	(cond
+		((find token ids :test 'equal) T)
+		(t nil)))
+
 (defun recognize (token)
   (let ((lexem (find-if (lambda (item) (string= token (car item))) lexemes-map)))
     (if lexem
@@ -130,10 +141,10 @@
 	(cond
 	  ((every 'digit-char-p token) (list token "number" (next-num)))
 	  ((every (lambda (ch) (or (digit-char-p ch) (eq #\. ch))) token) (list token "float" (next-float)))
-	  ((every (lambda (ch) (or (alphanumericp ch) (eq #\_ ch))) token) (list token "id" (next-id)))
+	  ((token-in-groups token) nil)
+	  ((every (lambda (ch) (or (alphanumericp ch) (eq #\_ ch))) token) (add-id-token token) (list token "id" (next-id)))
 	  (t (list token "error" "error"))))))
 
-(defparameter groups (make-hash-table :test 'equal))
 
 (defun add-to-groups (key value)
   (let ((group (gethash key groups)))
@@ -156,9 +167,10 @@
 			 (code (third lexem))
 			 (type (second lexem))
 			 (value (car lexem)))
+		  (when lexem
 		    (format t "~a " code)
 		    (format encoding-stream "~a " code)
-		    (add-to-groups type (list value code))))
+		    (add-to-groups type (list value code)))))
 	     (format t "~%")
 	     (format encoding-stream "~%"))
 	(format t "~%~%~%")
@@ -180,4 +192,5 @@
 	))))
 
 (defun ok-glass ()
-  (pre-parse "program.pas" "encoding.txt" "lexems.txt"))
+  (pre-parse "D:/Projects/clisp/program.pas" "D:/Projects/clisp/encoding.txt" 
+  	"D:/Projects/clisp/lexems.txt"))
