@@ -115,34 +115,93 @@
   (setq num-c (+ 1 num-c))
   (concatenate 'string "num" (write-to-string num-c)))
 
+(defun curr-num ()
+	(concatenate 'string "num" (write-to-string num-c)))
+
 (defun next-float ()
   (setq float-c (+ 1 float-c))
+  (concatenate 'string "float" (write-to-string float-c)))
+
+(defun curr-float ()
   (concatenate 'string "float" (write-to-string float-c)))
 
 (defun next-id ()
   (setq id-c (+ 1 id-c))
   (concatenate 'string "id" (write-to-string id-c)))
 
+(defun curr-id ()
+	(concatenate 'string "id" (write-to-string id-c)))
+
 (defparameter groups (make-hash-table :test 'equal))
 (defparameter ids '())
+(defparameter opers '())
+(defparameter swords '())
+(defparameter spls '())
 
 (defun add-id-token (token)
 	(push token ids))
 
-(defun token-in-groups (token)
+(defun token-in-ids (token)
 	(cond
 		((find token ids :test 'equal) T)
 		(t nil)))
 
+(defun add-oper-token (token)
+	(push token opers))
+
+(defun token-in-oper (token)
+	(cond
+		((find token opers :test 'equal) T)
+		(t nil)))
+
+(defun add-swords-token (token)
+	(push token swords))
+
+(defun token-in-swords (token)
+	(cond
+		((find token swords :test 'equal) T)
+		(t nil)))
+
+(defun add-spls-token (token)
+	(push token spls))
+
+(defun token-in-spls (token)
+	(cond
+		((find token spls :test 'equal) T)
+		(t nil)))
+
+(defun get-lexem (token key)
+	(let ((group (gethash key groups)))
+		(when group
+			(let ((lexem (find-if (lambda (item) (string= token (car item))) (gethash key groups))))
+	(if lexem
+		lexem
+		nil)))))
+
 (defun recognize (token)
-  (let ((lexem (find-if (lambda (item) (string= token (car item))) lexemes-map)))
+  (let* ((lexem (find-if (lambda (item) (string= token (car item))) lexemes-map)))
     (if lexem
-	lexem
+    	(cond 
+    		((token-in-swords token) (list token (second lexem) (third lexem)))
+    		((token-in-oper token) (list token (second lexem) (third lexem)))
+    		((token-in-spls token) (list token (second lexem) (third lexem)))
+    		((string= "service-word" (second lexem)) (add-swords-token token) (add-to-groups (second lexem) (list token (third lexem))) 
+    			(list token (second lexem) (third lexem)))
+    		((string= "splitter" (second lexem)) (add-spls-token token) (add-to-groups (second lexem) (list token (third lexem))) 
+    			(list token (second lexem) (third lexem)))
+    		((string= "operator" (second lexem)) (add-oper-token token) (add-to-groups (second lexem) (list token (third lexem))) 
+    			(list token (second lexem) (third lexem)))
+    		;(t (add-to-groups (second lexem) (list token (third lexem))) (list token (second lexem) (third lexem)))
+    	)
 	(cond
 	  ((every 'digit-char-p token) (list token "number" (next-num)))
-	  ((every (lambda (ch) (or (digit-char-p ch) (eq #\. ch))) token) (list token "float" (next-float)))
-	  ((token-in-groups token) nil)
-	  ((every (lambda (ch) (or (alphanumericp ch) (eq #\_ ch))) token) (add-id-token token) (list token "id" (next-id)))
+	  ((every (lambda (ch) (or (digit-char-p ch) (eq #\. ch))) token) (add-to-groups "float" (list token (next-float)))
+	   (list token "float" (curr-float)))
+	  ((token-in-ids token) (let* ((exist (get-lexem token "id"))
+	  	(code (second exist)))
+	   (list token "id" code)))
+	  ((every (lambda (ch) (or (alphanumericp ch) (eq #\_ ch))) token) (add-id-token token)
+	  (add-to-groups "id" (list token (next-id))) (list token "id" (curr-id)))
 	  (t (list token "error" "error"))))))
 
 
@@ -170,7 +229,8 @@
 		  (when lexem
 		    (format t "~a " code)
 		    (format encoding-stream "~a " code)
-		    (add-to-groups type (list value code)))))
+		    ;(add-to-groups type (list value code))
+		    )))
 	     (format t "~%")
 	     (format encoding-stream "~%"))
 	(format t "~%~%~%")
